@@ -187,7 +187,7 @@ input,select{background:var(--bg);border:1px solid var(--line);border-radius:10p
 /* ===== Configuração ===== */
 /* Cole aqui o mesmo PIN definido com definirPin() no Apps Script. */
 const PIN = 'COLE_SEU_PIN_AQUI';
-const API_URL = 'https://script.google.com/macros/s/AKfycbyO4Oq6ZaKu4BIPvsiqq0FhR_PS6HIyQP4ShCWfy01WaDTsBWAYQONH7nt8jbIx6eInyQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwqb0qPfLTII56XRv02e6Yqjw8O2a9b99hj6rrXqJzfNd03ycu58xJLE1EDKgwrDA23hg/exec';
 
 /* ===== Utilitários ===== */
 const $ = s => document.querySelector(s);
@@ -252,11 +252,21 @@ function renderPainel(p){
   const maxCat = Math.max(...p.categorias.map(c=>c.valor), 1);
   const maxS = Math.max(...p.serie.flatMap(s=>[s.entradas,s.saidas]), 1);
   const poup = p.entradas ? (p.saldo/p.entradas*100).toFixed(1).replace('.',',')+'%' : '—';
-
+  const difere = Math.abs(p.previsto - p.saldoHoje) > 0.004;
+  const pendente = p.aReceber > 0 || p.aPagar > 0;
+ 
   $('#vPainel').innerHTML = `
   <div class="hero">
-    <div class="lbl">Saldo de ${esc(mesNome(p.mes))}</div>
-    <div class="big num ${p.saldo<0?'s-c':''}">${brl(p.saldo)}</div>
+    <div class="lbl">Saldo hoje · ${fData(p.hoje)}</div>
+    <div class="big num ${p.saldoHoje<0?'s-c':''}">${brl(p.saldoHoje)}</div>
+    ${difere ? `<div class="lbl">Previsto até o fim de <span style="text-transform:capitalize">${esc(mesNome(p.mes))}</span>:
+      <b class="num ${p.previsto<0?'s-c':''}">${brl(p.previsto)}</b></div>` : ''}
+  </div>
+  ${pendente ? `<div class="grid2" style="margin-top:0">
+    <div class="block"><span class="lbl">A receber</span><b class="num e-c">${brl(p.aReceber)}</b></div>
+    <div class="block"><span class="lbl">Falta pagar</span><b class="num s-c">${brl(p.aPagar)}</b></div></div>` : ''}
+  <div class="block"><h2><span style="text-transform:capitalize">${esc(mesNome(p.mes))}</span>
+    <small>saldo do mês <b class="num ${p.saldo<0?'s-c':'e-c'}">${brl(p.saldo)}</b></small></h2>
     <div class="flow" role="img" aria-label="Entradas ${brl(p.entradas)}, saídas ${brl(p.saidas)}">
       <i class="e" style="width:${pe}%"></i><i class="s" style="width:${tot?100-pe:50}%"></i></div>
     <div class="legend">
@@ -265,7 +275,7 @@ function renderPainel(p){
     </div>
     <div class="lbl" style="margin-top:8px">Poupança: <b class="num">${poup}</b></div>
   </div>
-  ${p.orcAviso ? `<button class="note ${p.orcAviso.pct>=1?'over':''}" id="irOrc">${esc(p.orcAviso.nome)} ${p.orcAviso.pct>=1?'passou do limite do orçamento':'está em '+Math.round(p.orcAviso.pct*100)+'% do limite'}. Ver orçamento</button>` : ''}
+  ${p.orcAviso ? `<button class="note ${p.orcAviso.pct>=1?'over':''}" id="irOrc" style="margin-top:14px">${esc(p.orcAviso.nome)} ${p.orcAviso.pct>=1?'passou do limite do orçamento':'está em '+Math.round(p.orcAviso.pct*100)+'% do limite'}. Ver orçamento</button>` : ''}
   ${p.meta ? `<div class="block meta"><h2>Meta do mês <small class="num">${(pct*100).toFixed(1).replace('.',',')}%</small></h2>
     <div class="bar"><i class="${metaCls}" style="width:${Math.min(pct,1)*100}%"></i></div>
     <div class="legend"><span class="num">${brl(p.entradas)} de ${brl(p.meta)}</span><span class="num">${p.meta>p.entradas?'Faltam '+brl(p.meta-p.entradas):'Meta batida'}</span></div></div>` : ''}
@@ -282,7 +292,6 @@ function renderPainel(p){
   ligarTooltip(p.serie);
   const io = $('#irOrc'); if (io) io.onclick = () => setAba('orc');
 }
-
 function ligarTooltip(serie){
   document.querySelectorAll('.tip').forEach(t=>t.remove());
   const tip = document.createElement('div'); tip.className='tip hide'; document.body.append(tip);
